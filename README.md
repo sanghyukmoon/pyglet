@@ -24,10 +24,10 @@ s.problem_id          # 'shock_tube'
 s.basename            # 'shock01'
 s.basedir             # '/scratch/user/shock01'
 s.files               # dictionary containing all output files
-s.num                 # output numbers of all hdf5 files
+s.nums                # output numbers of all hdf5 files
 dat = s.load_athdf(7) # reads problem.out2.00007.athdf and convert it to xarray dataset
 (dat.dens*dat.dz).sum(dim='z').plot.imshow() # plot surface density map
-for num in s.num:
+for num in s.nums:
     dat = s.load_athdf(num)
     # loop through all outputs and post-process
     ...

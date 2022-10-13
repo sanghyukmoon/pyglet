@@ -19,7 +19,7 @@ class LoadSim(object):
             prefix for (athdf, hst, rst) output
         domain : dict
             info about dimension, cell size, time, etc.
-        num : list of int
+        nums : list of int
             athdf output numbers
 
     Methods
@@ -52,7 +52,7 @@ class LoadSim(object):
                 pass
 
         # find athdf output numbers
-        self.num = sorted(map(lambda p: int(p.name.strip('.athdf')[-5:]),
+        self.nums = sorted(map(lambda p: int(p.name.strip('.athdf')[-5:]),
                               self.basedir.glob('*.{}'.format('athdf'))))
 
     def load_athdf(self, num=None):
