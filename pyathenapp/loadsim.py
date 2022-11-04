@@ -1,4 +1,4 @@
-from athena_read import athdf
+from athena_read import athdf, athinput
 import xarray as xr
 import numpy as np
 from pathlib import Path
@@ -17,7 +17,7 @@ class LoadSim(object):
             output file paths for athdf, hst, rst
         problem_id : str
             prefix for (athdf, hst, rst) output
-        domain : dict
+        mesh : dict
             info about dimension, cell size, time, etc.
         nums : list of int
             athdf output numbers
@@ -41,15 +41,35 @@ class LoadSim(object):
         self.basedir = Path(basedir)
         self.basename = self.basedir.name
         
-        # find output files
+        # find output files by matching glob patterns
         self.files = {}
-        for ext in ['hst', 'athdf', 'rst']:
-            fmatches = self.basedir.glob('*.{}'.format(ext))
-            self.files[ext] = sorted(map(str, fmatches))
-            try:
-                self.problem_id = self.files[ext][0].split('/')[-1].split('.')[0]
-            except IndexError:
-                pass
+        patterns = dict(athinput='athinput.*',
+                        hst='*.hst',
+                        athdf='*.athdf',
+                        rst='*.rst') # add additional patterns here
+        for key, pattern in patterns.items():
+            fmatches = self.basedir.glob(pattern)
+            self.files[key] = sorted(fmatches)
+
+        # unique athinput file? if not, issue warning
+        if len(self.files['athinput']) == 0:
+            print("WARNING: found no input file")
+        elif len(self.files['athinput']) > 1:
+            print("WARNING: found more than one input file")
+        else:
+            # get problem_id and mesh information from input file
+            self.files['athinput'] = self.files['athinput'][0]
+            self.athinput = athinput(self.files['athinput'])
+            self.problem_id = self.athinput['job']['problem_id']
+            self.mesh = self.athinput['mesh']
+
+        # unique history dump? if not, issue warning
+        if len(self.files['hst']) == 0:
+            print("WARNING: found no history dump")
+        elif len(self.files['hst']) > 1:
+            print("WARNING: found more than one history dumps")
+        else:
+            self.files['hst'] = self.files['hst'][0]
 
         # find athdf output numbers
         self.nums = sorted(map(lambda p: int(p.name.strip('.athdf')[-5:]),
