@@ -17,8 +17,8 @@ class LoadSim(object):
             output file paths for athdf, hst, rst
         problem_id : str
             prefix for (athdf, hst, rst) output
-        mesh : dict
-            info about dimension, cell size, time, etc.
+        meta : dict
+            simulation metadata (information in athinput file)
         nums : list of int
             athdf output numbers
 
@@ -38,32 +38,36 @@ class LoadSim(object):
  
         """
 
+        # Use pathlib.Path for handling file paths
         self.basedir = Path(basedir)
         self.basename = self.basedir.name
         
-        # find output files by matching glob patterns
+        # Find output files by matching glob patterns
         self.files = {}
         patterns = dict(athinput='athinput.*',
                         hst='*.hst',
                         athdf='*.athdf',
                         rst='*.rst') # add additional patterns here
         for key, pattern in patterns.items():
-            fmatches = self.basedir.glob(pattern)
-            self.files[key] = sorted(fmatches)
+            self.files[key] = sorted(self.basedir.glob(pattern))
 
-        # unique athinput file? if not, issue warning
+        # Get metadata from input file
         if len(self.files['athinput']) == 0:
             print("WARNING: found no input file")
         elif len(self.files['athinput']) > 1:
             print("WARNING: found more than one input file")
         else:
-            # get problem_id and mesh information from input file
             self.files['athinput'] = self.files['athinput'][0]
-            self.athinput = athinput(self.files['athinput'])
-            self.problem_id = self.athinput['job']['problem_id']
-            self.mesh = self.athinput['mesh']
+            self.meta = athinput(self.files['athinput'])
 
-        # unique history dump? if not, issue warning
+        # TODO Get metadata from restart file
+        # This will be useful for restart experiments that do not have
+        # input file in their basedir.
+
+        # Get problem_id from metadata
+        self.problem_id = self.meta['job']['problem_id']
+
+        # Unique history dump? if not, issue warning
         if len(self.files['hst']) == 0:
             print("WARNING: found no history dump")
         elif len(self.files['hst']) > 1:
@@ -71,9 +75,9 @@ class LoadSim(object):
         else:
             self.files['hst'] = self.files['hst'][0]
 
-        # find athdf output numbers
-        self.nums = sorted(map(lambda p: int(p.name.strip('.athdf')[-5:]),
-                              self.basedir.glob('*.{}'.format('athdf'))))
+        # Find athdf output numbers
+        self.nums = sorted(map(lambda x: int(x.name.strip('.athdf')[-5:]),
+                               self.files['athdf']))
 
     def load_athdf(self, num=None):
         """Function to read Athena hdf5 file using athena_read
@@ -82,51 +86,31 @@ class LoadSim(object):
         Parameters
         ----------
         num : int
-           Snapshot number, e.g., /basedir/problem_id.?????.athdf
+           Snapshot number, e.g., /basedir/problem_id.00042.athdf
 
         Returns
         -------
         dat : xarray object
         """
+
+        # Find output_id of hdf5 files
+        fname = self.files['athdf'][0].name
+        idx = fname.find('.out')
+        output_id = fname[idx+4]
+
+        # Read athdf file using athena_read
+        dat = athdf(self.basedir / '{}.out{}.{:05d}.athdf'.format(
+                                    self.problem_id, output_id, num))
         
-        # find athdf snapshot with the snapshot id = num
-        fmatches = list(self.basedir.glob('*.{:05d}.athdf'.format(num)))
-        if (len(fmatches) == 0):
-            raise FileNotFoundError
-        if (len(fmatches) > 1):
-            raise Exception("Pattern matches more than one file")
-        
-        # read athdf file using athena_read
-        dat = athdf(fmatches[0])
-        
-        # convert to xarray object
-        varnames = np.array(dat['VariableNames'], dtype=str)
+        # Convert to xarray object
+        varnames = set(np.array(dat['VariableNames'], dtype=str))
         variables = [(['z', 'y', 'x'], dat[varname]) for varname in varnames]
+        attr_keys = (set(dat.keys()) - varnames
+                     - {'VariableNames','x1f','x2f','x3f','x1v','x2v','x3v'})
+        attrs = {attr_key:dat[attr_key] for attr_key in attr_keys}
         ds = xr.Dataset(
             data_vars=dict(zip(varnames, variables)),
-            coords=dict(
-                x=dat['x1v'],
-                y=dat['x2v'],
-                z=dat['x3v']
-            ),
-            attrs=dict(MaxLevel=dat['MaxLevel'],
-                      MeshBlockSize=dat['MeshBlockSize'],
-                      NumCycles=dat['NumCycles'],
-                      NumMeshBlocks=dat['NumMeshBlocks'],
-                      RootGridSize=dat['RootGridSize'],
-                      RootGridX1=dat['RootGridX1'],
-                      RootGridX2=dat['RootGridX2'],
-                      RootGridX3=dat['RootGridX3'],
-                      time=dat['Time'],
-                      dx=dat['x1f'][1]-dat['x1f'][0],
-                      dy=dat['x2f'][1]-dat['x2f'][0],
-                      dz=dat['x3f'][1]-dat['x3f'][0],
-                      x1min=dat['RootGridX1'][0],
-                      x1max=dat['RootGridX1'][1],
-                      x2min=dat['RootGridX2'][0],
-                      x2max=dat['RootGridX2'][1],
-                      x3min=dat['RootGridX3'][0],
-                      x3max=dat['RootGridX3'][1],
-                      ),
+            coords=dict(x=dat['x1v'], y=dat['x2v'], z=dat['x3v']),
+            attrs=attrs
         )
         return ds
