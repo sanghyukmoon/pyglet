@@ -1,41 +1,40 @@
-from athena_read import athdf, athinput
+import athena_read as ar
 import xarray as xr
 import numpy as np
 from pathlib import Path
 from matplotlib.colors import LogNorm
 
 class LoadSim(object):
-    """Class to prepare Athena++ simulation data analysis. Read input files and hdf5 outputs.
+    """Class for preparing Athena++ simulation data analysis.
 
-    Properties
-    ----------
-        basedir : str
-            base directory of simulation output
-        basename : str
-            basename (tail) of basedir
-        files : dict
-            output file paths for athdf, hst, rst
-        problem_id : str
-            prefix for (athdf, hst, rst) output
-        meta : dict
-            simulation metadata (information in athinput file)
-        nums : list of int
-            athdf output numbers
+    Data members
+    ------------
+    basedir : str
+        base directory of simulation output
+    basename : str
+        basename (tail) of basedir
+    files : dict
+        output file paths for athdf, hst, rst
+    problem_id : str
+        prefix for (athdf, hst, rst) output
+    meta : dict
+        simulation metadata (information in athinput file)
+    nums : list of int
+        athdf output numbers
 
     Methods
     -------
-        load_athdf() :
-            reads hdf5 file using athena_read and returns xarray object
+    load_athdf() : Reads hdf5 (.athdf) output file
+    load_hst() : Reads history dump (.hst)
     """
 
     def __init__(self, basedir):
         """Constructor for LoadSim class.
 
-        Parameters
-        ----------
+        Arguments
+        ---------
         basedir : str
             Name of the directory where all data is stored
- 
         """
 
         # Use pathlib.Path for handling file paths
@@ -58,7 +57,7 @@ class LoadSim(object):
             print("WARNING: found more than one input file")
         else:
             self.files['athinput'] = self.files['athinput'][0]
-            self.meta = athinput(self.files['athinput'])
+            self.meta = ar.athinput(self.files['athinput'])
 
         # TODO Get metadata from restart file
         # This will be useful for restart experiments that do not have
@@ -80,17 +79,16 @@ class LoadSim(object):
                                self.files['athdf']))
 
     def load_athdf(self, num=None):
-        """Function to read Athena hdf5 file using athena_read
-        return xarray object.
+        """Read Athena hdf5 file and convert it to xarray Dataset
 
-        Parameters
-        ----------
+        Arguments
+        ---------
         num : int
            Snapshot number, e.g., /basedir/problem_id.00042.athdf
 
-        Returns
+        Return
         -------
-        dat : xarray object
+        dat : xarray.Dataset
         """
 
         # Find output_id of hdf5 files
@@ -99,7 +97,7 @@ class LoadSim(object):
         output_id = fname[idx+4]
 
         # Read athdf file using athena_read
-        dat = athdf(self.basedir / '{}.out{}.{:05d}.athdf'.format(
+        dat = ar.athdf(self.basedir / '{}.out{}.{:05d}.athdf'.format(
                                     self.problem_id, output_id, num))
         
         # Convert to xarray object
@@ -114,3 +112,27 @@ class LoadSim(object):
             attrs=attrs
         )
         return ds
+
+    def load_hst(self):
+        """Reads athena++ history dump and convert it to xarray Dataset
+
+        Return
+        ------
+        hst : xarray.Dataset
+              coordinate
+                  - t: simulation time
+              variables
+                  - dt: simulation timestep
+                  - mass: total mass
+                  - mom1, mom2, mom3: total momenta in x, y, z-dir.
+                  - KE1, KE2, KE3: total kinetic E in x, y, z-dir.
+                  - gravE: total self-grav. potential E (\int 0.5*rho*Phi dV)
+        """
+        hst = ar.hst(self.files['hst'])
+        data_vars = {key: ('t', hst[key]) for key in hst.keys()}
+        coords = dict(t=hst['time'])
+        hst = xr.Dataset(data_vars, coords).drop('time')
+        hst = hst.rename({f'{i}-mom':f'mom{i}' for i in [1,2,3]}
+                         | {f'{i}-KE':f'KE{i}' for i in [1,2,3]}
+                         | {'grav-E':'gravE'})
+        return hst
