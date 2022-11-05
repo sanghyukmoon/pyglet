@@ -1,34 +1,36 @@
 # pyathenapp
 Minimal package for converting athena++ hdf5 output into xarray dataset
 
-## Basic Usage
-Suppose you ran a simulation in a directory `/scratch/user/shock01`
-```
-$ls /scratch/user/shock01
-athena
-athinput.sod
-shock_tube.hst
-shock_tube.out2.00000.athdf
-shock_tube.out2.00001.athdf
-...
-shock_tube.00000.rst
-shock_tube.final.rst
-...
-```
-You can read output by doing
-```
-from pyathenapp.loadsim import LoadSim
-# load simulation, find output files
-s = LoadSim('/scratch/user/shock01')
-s.problem_id          # 'shock_tube'
-s.basename            # 'shock01'
-s.basedir             # '/scratch/user/shock01'
-s.files               # dictionary containing all output files
-s.nums                # output numbers of all hdf5 files
-dat = s.load_athdf(7) # reads problem.out2.00007.athdf and convert it to xarray dataset
-(dat.dens*dat.dz).sum(dim='z').plot.imshow() # plot surface density map
-for num in s.nums:
-    dat = s.load_athdf(num)
-    # loop through all outputs and post-process
-    ...
-```
+## Quickstart
+* Load metadata (problem id, mesh info, etc.) of your simulation and setup file paths
+  ```
+  from pyathenapp.loadsim import LoadSim
+  s = LoadSim('/path/to/simulation/directory/model')
+  
+  s.basedir    # '/path/to/simulation/directory/model'
+  s.basename   # 'model'
+  s.meta       # dictionary containing simulation metadata (including those in athinput file)
+  s.files      # dictionary containing file paths of simulation outputs
+  s.problem_id # drefix of your simulation (e.g., shock_tube for shock_tube.out2.00042.athdf)
+  ```
+* Read history dump
+  ```
+  hst = s.load_hst()        # reads s.files['hst']
+  plt.plot(hst.t, hst.mass) # plot total mass evolution
+  ```
+* Read hdf5 output
+  ```
+  from matplotlib.colors import LogNorm
+  dat = s.load_athdf(42) # reads [basedir]/[problem_id].out?.00042.athdf
+  dat.dens.sel(z=0, method='nearest').plot.imshow(norm=LogNorm()) # plot midplane density
+  ```
+
+## Xarray tutorial
+* We use `xarray` to store both history and hdf5 data. `xarray` enables coordinate indexing as well as usual numpy-like indexing.
+  ```
+  dat = s.load_athdf(42)
+  dat.interp(x=0, y=-1.2, z=2.3)                # (x,y,z) = (0,-1.2,2.3) by interpolating from neighboring cells
+  dat.sel(x=0, y=-1.2, z=2.3, method='nearest') # nearest grid cell from the point (x,y,z) = (0,-1.2,2.3)
+  dat.dens[4,1,0]                               # (k,j,i) = (4,1,0); depending on transpose, k may not correspond to z, etc.
+  dat.isel(x=0, y=1, z=4)                       # (k,j,i) = (4,1,0); insensitive to transpose
+  ```
