@@ -1,8 +1,6 @@
 import athena_read as ar
 import xarray as xr
-import numpy as np
 from pathlib import Path
-from matplotlib.colors import LogNorm
 
 class LoadSim(object):
     """Class for preparing Athena++ simulation data analysis.
@@ -101,7 +99,7 @@ class LoadSim(object):
                                     self.problem_id, output_id, num))
         
         # Convert to xarray object
-        varnames = set(np.array(dat['VariableNames'], dtype=str))
+        varnames = set(map(lambda x: x.decode('ASCII'), dat['VariableNames']))
         variables = [(['z', 'y', 'x'], dat[varname]) for varname in varnames]
         attr_keys = (set(dat.keys()) - varnames
                      - {'VariableNames','x1f','x2f','x3f','x1v','x2v','x3v'})
