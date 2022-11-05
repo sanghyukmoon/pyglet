@@ -50,7 +50,7 @@ class LoadSim(object):
 
         # Get metadata from input file
         if len(self.files['athinput']) == 0:
-            print("WARNING: found no input file")
+            raise FileNotFoundError("cannot find input file")
         elif len(self.files['athinput']) > 1:
             print("WARNING: found more than one input file")
         else:
