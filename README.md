@@ -2,6 +2,12 @@
 Minimal package for converting athena++ hdf5 output into xarray dataset
 
 ## Quickstart
+* Setup conda environment
+  ```
+  cd /path/to/pyathenapp
+  conda env create -f env.yml
+  conda activate pyathenapp
+  ```
 * Load metadata (problem id, mesh info, etc.) of your simulation and setup file paths
   ```
   from pyathenapp.loadsim import LoadSim
