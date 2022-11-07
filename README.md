@@ -37,6 +37,5 @@ Minimal package for converting athena++ hdf5 output into xarray dataset
   dat = s.load_athdf(42)
   dat.interp(x=0, y=-1.2, z=2.3)                # (x,y,z) = (0,-1.2,2.3) by interpolating from neighboring cells
   dat.sel(x=0, y=-1.2, z=2.3, method='nearest') # nearest grid cell from the point (x,y,z) = (0,-1.2,2.3)
-  dat.dens[4,1,0]                               # (k,j,i) = (4,1,0); depending on transpose, k may not correspond to z, etc.
-  dat.isel(x=0, y=1, z=4)                       # (k,j,i) = (4,1,0); insensitive to transpose
+  dat.isel(x=0, y=1, z=4)                       # (i,j,k) = (0,1,4)
   ```
