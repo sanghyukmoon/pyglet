@@ -73,7 +73,7 @@ class LoadSim(object):
             self.files['hst'] = self.files['hst'][0]
 
         # Find athdf output numbers
-        self.nums = sorted(map(lambda x: int(x.name.strip('.athdf')[-5:]),
+        self.nums = sorted(map(lambda x: int(x.name.removesuffix('.athdf')[-5:]),
                                self.files['athdf']))
 
     def load_athdf(self, num=None):
