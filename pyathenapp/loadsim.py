@@ -131,6 +131,8 @@ class LoadSim(object):
         coords = dict(t=hst['time'])
         hst = xr.Dataset(data_vars, coords).drop('time')
         hst = hst.rename({f'{i}-mom':f'mom{i}' for i in [1,2,3]}
-                         | {f'{i}-KE':f'KE{i}' for i in [1,2,3]}
-                         | {'grav-E':'gravE'})
+                         | {f'{i}-KE':f'KE{i}' for i in [1,2,3]})
+        if 'grav-E' in hst:
+            hst = hst.rename({'grav-E':'gravE'})
+
         return hst
