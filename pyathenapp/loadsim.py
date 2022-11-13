@@ -44,7 +44,9 @@ class LoadSim(object):
         patterns = dict(athinput='athinput.*',
                         hst='*.hst',
                         athdf='*.athdf',
-                        rst='*.rst') # add additional patterns here
+                        rst='*.rst',
+                        stdout='slurm-*.out',
+                        stderr='slurm-*.err') # add additional patterns here
         for key, pattern in patterns.items():
             self.files[key] = sorted(self.basedir.glob(pattern))
 
