@@ -1,16 +1,16 @@
-# pyathenapp
+# pyglet
 Minimal package for converting athena++ hdf5 output into xarray dataset
 
 ## Quickstart
 * Setup conda environment
   ```
-  cd /path/to/pyathenapp
+  cd /path/to/pyglet
   conda env create -f env.yml
-  conda activate pyathenapp
+  conda activate pyglet
   ```
 * Load metadata (problem id, mesh info, etc.) of your simulation and setup file paths
   ```
-  from pyathenapp.loadsim import LoadSim
+  from pyglet.loadsim import LoadSim
   s = LoadSim('/path/to/simulation/directory/model')
   
   s.basedir    # '/path/to/simulation/directory/model'
