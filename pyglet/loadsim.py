@@ -1,4 +1,4 @@
-import athena_read as ar
+from . import athena_read as ar
 import xarray as xr
 from pathlib import Path
 
