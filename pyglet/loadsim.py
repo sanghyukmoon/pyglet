@@ -1,4 +1,5 @@
 from . import athena_read as ar
+import numpy as np
 import xarray as xr
 from pathlib import Path
 
@@ -106,6 +107,11 @@ class LoadSim(object):
         attr_keys = (set(dat.keys()) - varnames
                      - {'VariableNames','x1f','x2f','x3f','x1v','x2v','x3v'})
         attrs = {attr_key:dat[attr_key] for attr_key in attr_keys}
+        for xr_key, ar_key in zip(['dx','dy','dz'], ['x1f','x2f','x3f']):
+            dx = np.unique(np.diff(dat[ar_key])).squeeze()
+            if dx.size == 1: dx = dx[()]
+            attrs[xr_key] = dx
+        attrs['meta'] = self.meta
         ds = xr.Dataset(
             data_vars=dict(zip(varnames, variables)),
             coords=dict(x=dat['x1v'], y=dat['x2v'], z=dat['x3v']),
