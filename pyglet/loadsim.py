@@ -2,6 +2,7 @@ from . import athena_read as ar
 import numpy as np
 import xarray as xr
 from pathlib import Path
+import yt
 
 class LoadSim(object):
     """Class for preparing Athena++ simulation data analysis.
@@ -79,13 +80,15 @@ class LoadSim(object):
         self.nums = sorted(map(lambda x: int(x.name.removesuffix('.athdf')[-5:]),
                                self.files['athdf']))
 
-    def load_athdf(self, num=None):
+    def load_athdf(self, num=None, load_method='athdf'):
         """Read Athena hdf5 file and convert it to xarray Dataset
 
         Arguments
         ---------
         num : int
            Snapshot number, e.g., /basedir/problem_id.00042.athdf
+        load_method : str
+            : method to read athdf file. 'athdf' or 'yt'
 
         Return
         -------
@@ -97,26 +100,30 @@ class LoadSim(object):
         idx = fname.find('.out')
         output_id = fname[idx+4]
 
-        # Read athdf file using athena_read
-        dat = ar.athdf(self.basedir / '{}.out{}.{:05d}.athdf'.format(
-                                    self.problem_id, output_id, num))
-        
-        # Convert to xarray object
-        varnames = set(map(lambda x: x.decode('ASCII'), dat['VariableNames']))
-        variables = [(['z', 'y', 'x'], dat[varname]) for varname in varnames]
-        attr_keys = (set(dat.keys()) - varnames
-                     - {'VariableNames','x1f','x2f','x3f','x1v','x2v','x3v'})
-        attrs = {attr_key:dat[attr_key] for attr_key in attr_keys}
-        for xr_key, ar_key in zip(['dx','dy','dz'], ['x1f','x2f','x3f']):
-            dx = np.unique(np.diff(dat[ar_key])).squeeze()
-            if dx.size == 1: dx = dx[()]
-            attrs[xr_key] = dx
-        attrs['meta'] = self.meta
-        ds = xr.Dataset(
-            data_vars=dict(zip(varnames, variables)),
-            coords=dict(x=dat['x1v'], y=dat['x2v'], z=dat['x3v']),
-            attrs=attrs
-        )
+        if load_method=='athdf':
+            # Read athdf file using athena_read
+            dat = ar.athdf(self.basedir / '{}.out{}.{:05d}.athdf'.format(
+                           self.problem_id, output_id, num))
+
+            # Convert to xarray object
+            varnames = set(map(lambda x: x.decode('ASCII'), dat['VariableNames']))
+            variables = [(['z', 'y', 'x'], dat[varname]) for varname in varnames]
+            attr_keys = (set(dat.keys()) - varnames
+                         - {'VariableNames','x1f','x2f','x3f','x1v','x2v','x3v'})
+            attrs = {attr_key:dat[attr_key] for attr_key in attr_keys}
+            for xr_key, ar_key in zip(['dx','dy','dz'], ['x1f','x2f','x3f']):
+                dx = np.unique(np.diff(dat[ar_key])).squeeze()
+                if dx.size == 1: dx = dx[()]
+                attrs[xr_key] = dx
+            attrs['meta'] = self.meta
+            ds = xr.Dataset(
+                data_vars=dict(zip(varnames, variables)),
+                coords=dict(x=dat['x1v'], y=dat['x2v'], z=dat['x3v']),
+                attrs=attrs
+            )
+        elif load_method=='yt':
+            ds = yt.load(self.basedir / '{}.out{}.{:05d}.athdf'.format(
+                         self.problem_id, output_id, num))
         return ds
 
     def load_hst(self):
