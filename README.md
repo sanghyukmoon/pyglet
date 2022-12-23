@@ -25,17 +25,32 @@ Minimal package for converting athena++ hdf5 output into xarray dataset
   plt.plot(hst.t, hst.mass) # plot total mass evolution
   ```
 * Read hdf5 output
+  - Using xarray
   ```
   from matplotlib.colors import LogNorm
-  dat = s.load_athdf(42) # reads [basedir]/[problem_id].out?.00042.athdf
-  dat.dens.sel(z=0, method='nearest').plot.imshow(norm=LogNorm()) # plot midplane density
+  ds = s.load_athdf(42) # reads [basedir]/[problem_id].out?.00042.athdf
+  ds.dens.sel(z=0, method='nearest').plot.imshow(norm=LogNorm()) # plot midplane density
+  ```
+  - Using yt
+  ```
+  ds = s.load_athdf(42, load_method='yt')
+  ```
+  - When you have multiple hdf5 outputs
+  ```
+  'output2': {'file_type': 'hdf5', 'variable': 'prim', 'dt': 0.01},
+  'output3': {'file_type': 'hdf5', 'variable': 'uov', 'dt': 0.01},
+  ```
+  you can use `output_id` parameter to specify which one to read
+  ```
+  ds = s.load_athdf(42, output_id=2, load_method='yt')
+  uov = s.load_athdf(42, output_id=3, load_method='xarray')
   ```
 
 ## Xarray tutorial
-* We use `xarray` to store both history and hdf5 data. `xarray` enables coordinate indexing as well as usual numpy-like indexing.
+* `xarray` enables coordinate indexing as well as usual numpy-like indexing.
   ```
-  dat = s.load_athdf(42)
-  dat.interp(x=0, y=-1.2, z=2.3)                # (x,y,z) = (0,-1.2,2.3) by interpolating from neighboring cells
-  dat.sel(x=0, y=-1.2, z=2.3, method='nearest') # nearest grid cell from the point (x,y,z) = (0,-1.2,2.3)
-  dat.isel(x=0, y=1, z=4)                       # (i,j,k) = (0,1,4)
+  ds = s.load_athdf(42)
+  ds.interp(x=0, y=-1.2, z=2.3)                # (x,y,z) = (0,-1.2,2.3) by interpolating from neighboring cells
+  ds.sel(x=0, y=-1.2, z=2.3, method='nearest') # nearest grid cell from the point (x,y,z) = (0,-1.2,2.3)
+  ds.isel(x=0, y=1, z=4)                       # (i,j,k) = (0,1,4)
   ```
