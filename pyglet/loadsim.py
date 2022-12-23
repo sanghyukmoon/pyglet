@@ -81,25 +81,29 @@ class LoadSim(object):
         self.nums = sorted(map(lambda x: int(x.name.removesuffix('.athdf')[-5:]),
                                self.files['athdf']))
 
-    def load_athdf(self, num=None, load_method='athdf'):
+    def load_athdf(self, num=None, output_id=None, load_method='athdf'):
         """Read Athena hdf5 file and convert it to xarray Dataset
 
         Arguments
         ---------
         num : int
-           Snapshot number, e.g., /basedir/problem_id.00042.athdf
+            Snapshot number, e.g., /basedir/problem_id.00042.athdf
+        output_id : int (optional)
+            Output id given in the <output#> block. Useful when there are
+            more than one athdf outputs.
         load_method : str
-            : method to read athdf file. 'athdf' or 'yt'
+            Method to read athdf file. 'athdf' or 'yt'
 
         Return
         -------
         dat : xarray.Dataset
         """
 
-        # Find output_id of hdf5 files
-        fname = self.files['athdf'][0].name
-        idx = fname.find('.out')
-        output_id = fname[idx+4]
+        if output_id is None:
+            # Find output_id of hdf5 files
+            fname = self.files['athdf'][0].name
+            idx = fname.find('.out')
+            output_id = fname[idx+4]
 
         if load_method=='athdf':
             # Read athdf file using athena_read
