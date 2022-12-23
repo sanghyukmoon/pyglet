@@ -1005,13 +1005,14 @@ def restrict_like(vals, levels, vols=None):
 
 # ========================================================================================
 
-def athinput(filename):
+def athinput(filename, lines=None):
     """Read athinput file and returns a dictionary of dictionaries."""
 
-    # Read data
-    with open(filename, 'r') as athinput:
-        # remove comments, extra whitespace, and empty lines
-        lines = filter(None, [i.split('#')[0].strip() for i in athinput.readlines()])
+    if lines is None:
+        # Read data
+        with open(filename, 'r') as athinput:
+            # remove comments, extra whitespace, and empty lines
+            lines = filter(None, [i.split('#')[0].strip() for i in athinput.readlines()])
     data = {}
     # split into blocks, first element will be empty
     blocks = ('\n'.join(lines)).split('<')[1:]

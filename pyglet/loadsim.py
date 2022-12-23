@@ -52,18 +52,19 @@ class LoadSim(object):
         for key, pattern in patterns.items():
             self.files[key] = sorted(self.basedir.glob(pattern))
 
-        # Get metadata from input file
-        if len(self.files['athinput']) == 0:
-            raise FileNotFoundError("cannot find input file")
-        elif len(self.files['athinput']) > 1:
-            print("WARNING: found more than one input file")
-        else:
-            self.files['athinput'] = self.files['athinput'][0]
-            self.meta = ar.athinput(self.files['athinput'])
-
-        # TODO Get metadata from restart file
-        # This will be useful for restart experiments that do not have
-        # input file in their basedir.
+        # Get metadata from standard output file
+        with open(self.files['stdout'][-1], 'r') as stdout:
+            # skip to the first 'PAR_DUMP' indicator
+            while 'PAR_DUMP' not in stdout.readline(): pass
+            lines = []
+            line = stdout.readline()
+            while 'PAR_DUMP' not in line:
+                # remove comments and extra whitespace
+                lines.append(line.split('#')[0].strip())
+                line = stdout.readline()
+            # remove empty lines
+            lines = filter(None, lines)
+        self.meta = ar.athinput(None, lines)
 
         # Get problem_id from metadata
         self.problem_id = self.meta['job']['problem_id']
