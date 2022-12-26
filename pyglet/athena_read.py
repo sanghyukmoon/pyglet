@@ -210,6 +210,24 @@ def tab(filename, raw=False, dimensions=None):
 
 # ========================================================================================
 
+def partab(filename, raw=False, time=None):
+    """Read par?.tab files and return dict or array.
+    """
+    import pandas as pd
+
+    if raw:
+        return pd.read_csv(filename, sep=r'\s+', skiprows=2)
+    else:
+        with open(filename, 'r') as fp:
+            l2 = fp.readline()
+            l2 = fp.readline()
+        # time = eval(l1.split(' ')[-1])
+        names = l2.split(' ')[1:-1:2]
+        return pd.read_csv(filename, names=names, sep=r'\s+', skiprows=2)
+
+
+# ========================================================================================
+
 def vtk(filename):
     """Read .vtk files and return dict of arrays of data."""
 

@@ -47,13 +47,22 @@ class LoadSim(object):
                         hst='*.hst',
                         athdf='*.athdf',
                         rst='*.rst',
+                        partab='*par?.tab',
+                        parhst='*par?.csv',
                         stdout='slurm-*.out',
                         stderr='slurm-*.err') # add additional patterns here
         for key, pattern in patterns.items():
             self.files[key] = sorted(self.basedir.glob(pattern))
+            if len(self.files[key]) == 0:
+                print("WARNING: found no {} file".format(key))
+        if len(self.files['hst']) > 1:
+            print("WARNING: found more than one history files")
+        if len(self.files['athinput']) > 1:
+            print("WARNING: found more than one input files")
 
         # Get metadata from standard output file
         with open(self.files['stdout'][-1], 'r') as stdout:
+            print("Reading metadata from the last stdout file: {}".format(self.files['stdout'][-1].name))
             # skip to the first 'PAR_DUMP' indicator
             while 'PAR_DUMP' not in stdout.readline(): pass
             lines = []
@@ -69,13 +78,6 @@ class LoadSim(object):
         # Get problem_id from metadata
         self.problem_id = self.meta['job']['problem_id']
 
-        # Unique history dump? if not, issue warning
-        if len(self.files['hst']) == 0:
-            print("WARNING: found no history dump")
-        elif len(self.files['hst']) > 1:
-            print("WARNING: found more than one history dumps")
-        else:
-            self.files['hst'] = self.files['hst'][0]
 
         # Find athdf output numbers
         self.nums = sorted(map(lambda x: int(x.name.removesuffix('.athdf')[-5:]),
