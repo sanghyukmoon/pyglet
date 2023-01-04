@@ -54,30 +54,36 @@ class LoadSim(object):
         for key, pattern in patterns.items():
             self.files[key] = sorted(self.basedir.glob(pattern))
             if len(self.files[key]) == 0:
-                print("WARNING: found no {} file".format(key))
+                print("WARNING: Found no {} file".format(key))
         if len(self.files['hst']) > 1:
-            print("WARNING: found more than one history files")
+            print("WARNING: Found more than one history files")
         if len(self.files['athinput']) > 1:
-            print("WARNING: found more than one input files")
+            print("WARNING: Found more than one input files")
 
         # Get metadata from standard output file
         with open(self.files['stdout'][-1], 'r') as stdout:
             print("Reading metadata from the last stdout file: {}".format(self.files['stdout'][-1].name))
-            # skip to the first 'PAR_DUMP' indicator
-            while 'PAR_DUMP' not in stdout.readline(): pass
+            niter = 0
+            toggle = False
             lines = []
-            line = stdout.readline()
-            while 'PAR_DUMP' not in line:
-                # remove comments and extra whitespace
-                lines.append(line.split('#')[0].strip())
-                line = stdout.readline()
+            for line in stdout:
+                if niter > 1000:
+                    print("Cannot find PAR_DUMP block in the first 1000 lines")
+                    break
+                if toggle:
+                    lines.append(line.split('#')[0].strip())
+                if 'PAR_DUMP' in line:
+                    toggle = not toggle
+                niter += 1
             # remove empty lines
             lines = filter(None, lines)
         self.meta = ar.athinput(None, lines)
 
         # Get problem_id from metadata
-        self.problem_id = self.meta['job']['problem_id']
-
+        if self.meta:
+            self.problem_id = self.meta['job']['problem_id']
+        else:
+            print("WARNING: Failed to read metadata")
 
         # Find athdf output numbers
         self.nums = sorted(map(lambda x: int(x.name.removesuffix('.athdf')[-5:]),
@@ -149,7 +155,7 @@ class LoadSim(object):
                   - KE1, KE2, KE3: total kinetic E in x, y, z-dir.
                   - gravE: total self-grav. potential E (\int 0.5*rho*Phi dV)
         """
-        hst = ar.hst(self.files['hst'])
+        hst = ar.hst(self.files['hst'][0])
         data_vars = {key: ('t', hst[key]) for key in hst.keys()}
         coords = dict(t=hst['time'])
         hst = xr.Dataset(data_vars, coords).drop('time')
