@@ -61,29 +61,27 @@ class LoadSim(object):
             print("WARNING: Found more than one input files")
 
         # Get metadata from standard output file
-        with open(self.files['stdout'][-1], 'r') as stdout:
-            print("Reading metadata from the last stdout file: {}".format(self.files['stdout'][-1].name))
-            niter = 0
-            toggle = False
-            lines = []
-            for line in stdout:
-                if niter > 1000:
-                    print("Cannot find PAR_DUMP block in the first 1000 lines")
-                    break
-                if toggle:
-                    lines.append(line.split('#')[0].strip())
-                if 'PAR_DUMP' in line:
-                    toggle = not toggle
-                niter += 1
-            # remove empty lines
-            lines = filter(None, lines)
-        self.meta = ar.athinput(None, lines)
-
-        # Get problem_id from metadata
-        if self.meta:
+        try:
+            with open(self.files['stdout'][-1], 'r') as stdout:
+                print("Reading metadata from the last stdout file: {}".format(self.files['stdout'][-1].name))
+                niter = 0
+                toggle = False
+                lines = []
+                for line in stdout:
+                    if niter > 1000:
+                        print("Cannot find PAR_DUMP block in the first 1000 lines")
+                        break
+                    if toggle:
+                        lines.append(line.split('#')[0].strip())
+                    if 'PAR_DUMP' in line:
+                        toggle = not toggle
+                    niter += 1
+                # remove empty lines
+                lines = filter(None, lines)
+            self.meta = ar.athinput(None, lines)
             self.problem_id = self.meta['job']['problem_id']
-        else:
-            print("WARNING: Failed to read metadata")
+        except IndexError:
+            print("WARNING: Failed to read metadata from the standard output file.")
 
         # Find athdf output numbers
         self.nums = sorted(map(lambda x: int(x.name.removesuffix('.athdf')[-5:]),
